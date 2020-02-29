@@ -1,9 +1,10 @@
 
-#Prepare
+# Prepare
 sudo apt-get install -y rar unrar
 # brew install unrar for mac
 
-
+# Usage
+nohup python -u customer/batch_zip.py >> map_log.txt  2>&1 &
 
 # Convert dicom to numpy
 

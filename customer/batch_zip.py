@@ -15,7 +15,7 @@ from tqdm import tqdm
 
 
 def extract(input_file, out_file):
-    # print(f'{input_file}')
+    print(f'{input_file}')
 
     if input_file.endswith('rar'):
         rf = rarfile.RarFile(input_file)
@@ -60,13 +60,22 @@ if __name__ == '__main__':
     all_list.extend(zip_list)
     for input_file in tqdm(sorted(all_list)):
         print(input_file)
+        tmp_output_fold = input_file
+        tmp_output_fold = tmp_output_fold.replace(input_fold, output_fold)
+
+        meta_file = f'{tmp_output_fold}/meta.csv'
+        if os.path.exists(meta_file):
+            print(meta_file)
+            df = pd.read_csv(meta_file)
+            print(f'Already had {len(df)} dicom files save to npz')
+            continue
+
         if os.path.exists(tmp_fold):
             shutil.rmtree(tmp_fold)
         os.makedirs(tmp_fold, exist_ok=True)
+
         extract(input_file, tmp_fold)
 
-        tmp_output_fold = input_file
-        tmp_output_fold = tmp_output_fold.replace(input_fold, output_fold)
         print('=======',tmp_output_fold)
         get_nii(tmp_fold, tmp_output_fold)
 

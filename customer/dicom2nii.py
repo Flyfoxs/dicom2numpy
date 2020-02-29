@@ -18,13 +18,14 @@ import hashlib
 
 
 def get_match_list(input_fold):
-    ex_list = list(glob(f'{input_fold}/**/*000*', recursive=True))
+    ex_list = list(glob(f'{input_fold}/**/*0000*', recursive=True))
     dcm_list = list(glob(f'{input_fold}/**/*.DCM', recursive=True))
     ex_list.extend(dcm_list)
-    if ex_list:
-        return ex_list
-    else:
-        raise Exception(f'Can not find DCM file with {input_fold}')
+    ex_list = [path for path in ex_list if os.path.isfile(path)]
+    if len(ex_list) == 0:
+        print(f'Can not find DCM file with {input_fold}, Exception')
+    return ex_list
+
 
 
 def get_nii(input_fold, output_fold):
@@ -42,18 +43,28 @@ def get_nii(input_fold, output_fold):
     meta = []
 
     for sn, series in enumerate(sub_fold):
-        # print(series)
+        print(series)
         try:
             file_list = get_match_list(series)
             file_cnt = len(file_list)
             img_numpy = None
             zip_path_hash = hashlib.md5(f'{output_fold}{series}'.encode()).hexdigest()
+            print(zip_path_hash, series)
             for sid, instance in enumerate(file_list):
-                # print(sn, instance)
-
-                ds = pydicom.dcmread(instance, force=True)
-                ds.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
-                img = ds.pixel_array  # .shape
+                #print(sn, instance)
+                try:
+                    ds = pydicom.dcmread(instance, force=True)
+                    ds.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
+                    img = ds.pixel_array
+                except ValueError as e:
+                    print(f'Exception on file:{instance}')
+                    print(e)
+                    continue
+                except Exception as e:
+                    print(f'Exception on file:{instance}')
+                    raise(e)
+                #
+                 # .shape
                 #             sid = ds.SeriesInstanceUID
                 #             z = ds.SpacingBetweenSlices  #= z
                 #             [x, y] = ds.PixelSpacing
@@ -94,10 +105,10 @@ def get_nii(input_fold, output_fold):
         except Exception as e:
             pass
             raise (e)
-
-    df = pd.DataFrame(meta)
-    df.to_csv(meta_file, index=None)
-    return df
+    if meta:
+        df = pd.DataFrame(meta)
+        df.to_csv(meta_file, index=None)
+        return df
 
 if __name__ == '__main__':
     input_fold = '/Users/felix/Documents/med_data'
