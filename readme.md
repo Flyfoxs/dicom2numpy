@@ -1,4 +1,8 @@
 
+#Prepare
+sudo apt-get install -y rar unrar
+# brew install unrar for mac
+
 
 
 # Convert dicom to numpy
@@ -8,12 +12,13 @@ python customer/dicom2nii.py
 
 ## Python Version
 tmp = np.load(test.npz)
-tmp = ds.f.arr_0
+tmp = tmp.f.arr_0
 plt.imshow(tmp[0])
 
 ## 字段解释
 sid: 对应于numpy的第一维
 series: 对应于文件夹名字
+SliceLocation: slice 对应位置
 
 
 # Others
