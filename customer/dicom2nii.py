@@ -19,11 +19,13 @@ import hashlib
 
 def get_match_list(input_fold):
     ex_list = list(glob(f'{input_fold}/**/*0000*', recursive=True))
-    dcm_list = list(glob(f'{input_fold}/**/*.DCM', recursive=True))
-    ex_list.extend(dcm_list)
+    dcm_list0 = list(glob(f'{input_fold}/**/*.DCM', recursive=True))
+    dcm_list1 = list(glob(f'{input_fold}/**/*.dcm', recursive=True))
+    ex_list.extend(dcm_list0)
+    ex_list.extend(dcm_list1)
     ex_list = [path for path in ex_list if os.path.isfile(path)]
-    if len(ex_list) == 0:
-        print(f'Can not find DCM file with {input_fold}, Exception')
+    # if len(ex_list) == 0:
+    #     print(f'Can not find DCM file with {input_fold}, Exception')
     return ex_list
 
 
@@ -46,6 +48,8 @@ def get_nii(input_fold, output_fold):
         print(series)
         try:
             file_list = get_match_list(series)
+            if file_list:
+                print(f'Can not find DCM from fold:{series}')
             file_cnt = len(file_list)
             img_numpy = None
             zip_path_hash = hashlib.md5(f'{output_fold}{series}'.encode()).hexdigest()
@@ -56,27 +60,32 @@ def get_nii(input_fold, output_fold):
                     ds = pydicom.dcmread(instance, force=True)
                     ds.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
                     img = ds.pixel_array
+
+                    #
+                     # .shape
+                    #             sid = ds.SeriesInstanceUID
+                    #             z = ds.SpacingBetweenSlices  #= z
+                    #             [x, y] = ds.PixelSpacing
+                    # print(f'seriesFold:{os.path.basename(file)},  PixelSpacing={ds.PixelSpacing} , SpacingBetweenSlices={ds.SpacingBetweenSlices}, Series:')
+                    # print(img.shape)
+                    if file_cnt > 1:
+                        img_numpy = np.zeros((file_cnt, *img.shape)) if img_numpy is None else img_numpy
+                        img_numpy[sid] = img
+                    else:
+                        img_numpy = np.zeros((file_cnt, *img.shape)) if img_numpy is None else img_numpy
+                        img_numpy[0] = img
                 except ValueError as e:
-                    print(f'Exception on file:{instance}')
+                    print(file_cnt, img_numpy.shape, img.shape, img_numpy.dtype, img.dtype, instance)
+                    print(f'Exception(ValueError) on file:{instance}')
+                    print(e)
+                    continue
+                except AttributeError as e :
+                    print(f'Exception(AttributeError) on file:{instance}')
                     print(e)
                     continue
                 except Exception as e:
                     print(f'Exception on file:{instance}')
                     raise(e)
-                #
-                 # .shape
-                #             sid = ds.SeriesInstanceUID
-                #             z = ds.SpacingBetweenSlices  #= z
-                #             [x, y] = ds.PixelSpacing
-                # print(f'seriesFold:{os.path.basename(file)},  PixelSpacing={ds.PixelSpacing} , SpacingBetweenSlices={ds.SpacingBetweenSlices}, Series:')
-                # print(img.shape)
-                if file_cnt > 1:
-                    img_numpy = np.zeros((file_cnt, *img.shape)) if img_numpy is None else img_numpy
-                    # print(file_cnt, img_numpy.shape, img.shape, img_numpy.dtype, img.dtype)
-                    img_numpy[sid] = img
-                else:
-                    img_numpy = np.zeros((file_cnt, *img.shape)) if img_numpy is None else img_numpy
-                    img_numpy[0] = img
                 meta.append({
                     'file_md5': zip_path_hash,
                     'series': os.path.basename(series),
