@@ -15,7 +15,8 @@ from tqdm import tqdm
 
 
 def extract(input_file, out_file):
-    print(f'{input_file}')
+    #print(f'{input_file}, {out_file}')
+
 
     if input_file.endswith('rar'):
         rf = rarfile.RarFile(input_file)
@@ -37,49 +38,42 @@ def extract(input_file, out_file):
             if os.path.exists(file):
                 extract(file, out_file)
     else:
+        pd.DataFrame().to_csv(f'{real_output}/done.csv')
+        print(f'Done:{input_file}')
         return True
 
 
 if __name__ == '__main__':
 
-    input_fold = '/Volumes/PhiHardisk /lung/My Passport'
-    output_fold = '/Volumes/PhiHardisk /lung_output'
-    tmp_fold = '/Volumes/PhiHardisk /tmp'
+    # input_fold = '/Volumes/PhiHardisk /lung/My Passport'
+    # output_fold = '/Volumes/PhiHardisk /lung_output'
+    # tmp_fold = '/Volumes/PhiHardisk /tmp'
+    #
+    # input_fold = '/Users/felix/Documents/med_data/武汉肺科/input'
+    # output_fold = '/Users/felix/Documents/med_data/武汉肺科/output'
+    # tmp_fold =  '/Users/felix/Documents/med_data/武汉肺科/tmp'
 
-    input_fold = '/Users/felix/Documents/med_data/武汉肺科/input'
-    output_fold = '/Users/felix/Documents/med_data/武汉肺科/output'
-    tmp_fold =  '/Users/felix/Documents/med_data/武汉肺科/tmp'
-
-    input_fold = '/Volumes/My Passport/lung/raw'
+    raw_fold = '/Volumes/My Passport/lung/raw'
     output_fold = '/Volumes/My Passport/lung/output'
+    dicm_fold = '/Volumes/My Passport/lung/dicm'
     tmp_fold = '/Volumes/My Passport/lung/tmp'
 
 
-    all_list = list(glob(f'{input_fold}/**/*.rar', recursive=True))
-    zip_list = list(glob(f'{input_fold}/**/*.zip', recursive=True))
+    all_list = list(glob(f'{raw_fold}/**/*.rar', recursive=True))
+    zip_list = list(glob(f'{raw_fold}/**/*.zip', recursive=True))
     all_list.extend(zip_list)
-    for input_file in tqdm(sorted(all_list)):
+    for input_file in tqdm(sorted(all_list, reverse=True)):
         print(input_file)
-        tmp_output_fold = input_file
-        tmp_output_fold = tmp_output_fold.replace(input_fold, output_fold)
 
-        meta_file = f'{tmp_output_fold}/meta.csv'
+        real_output = input_file.replace(raw_fold,dicm_fold)
+
+        meta_file = f'{real_output}/done.csv'
         if os.path.exists(meta_file):
-            print(meta_file)
-            df = pd.read_csv(meta_file)
-            print(f'Already had {len(df)} dicom files save to npz')
+            print(f'Already had done flag for archive file:{input_file}')
             continue
-
-        if os.path.exists(tmp_fold):
-            shutil.rmtree(tmp_fold)
         os.makedirs(tmp_fold, exist_ok=True)
+        extract(input_file, real_output)
 
-        extract(input_file, tmp_fold)
 
-        print('=======',tmp_output_fold)
-        get_nii(tmp_fold, tmp_output_fold)
-
-        if os.path.exists(tmp_fold):
-            shutil.rmtree(tmp_fold)
 
 

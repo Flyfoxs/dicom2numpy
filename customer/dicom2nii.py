@@ -14,6 +14,7 @@ import zipfile
 
 import shutil
 import hashlib
+from pyforest import *
 
 
 
@@ -37,6 +38,8 @@ def get_nii(input_fold, output_fold):
         df = pd.read_csv(meta_file)
         print(f'Already had {len(df)} dicom files save to npz')
         return len(df)
+    else:
+        print(f'Begin to process:{input_fold}')
 
     # base_fold = f'{input_fold}/**/*.dcm'
     # base_fold = f'{input_fold}/**/*000*'
@@ -52,13 +55,16 @@ def get_nii(input_fold, output_fold):
                 print(f'Can not find DCM from fold:{series}')
             file_cnt = len(file_list)
             img_numpy = None
+
             zip_path_hash = hashlib.md5(f'{output_fold}{series}'.encode()).hexdigest()
-            print(zip_path_hash, series)
+
+            print(f'MAP, {zip_path_hash}, {series}')
             for sid, instance in enumerate(file_list):
                 #print(sn, instance)
                 try:
                     ds = pydicom.dcmread(instance, force=True)
                     ds.file_meta.TransferSyntaxUID = pydicom.uid.ImplicitVRLittleEndian
+                    ds.file_meta.PlanarConfiguration = 0
                     img = ds.pixel_array
 
                     #
@@ -76,7 +82,10 @@ def get_nii(input_fold, output_fold):
                         img_numpy[0] = img
                 except ValueError as e:
                     print(file_cnt, img_numpy.shape, img.shape, img_numpy.dtype, img.dtype, instance)
-                    print(f'Exception(ValueError) on file:{instance}')
+                    if img_numpy.shape[-1] != img.shape[-1] or img_numpy.shape[-2] != img.shape[-2]:
+                        print(f'Exception(SizeError) on file:{instance}')
+                    else:
+                        print(f'Exception(ValueError) on file:{instance}')
                     print(e)
                     continue
                 except AttributeError as e :
@@ -97,9 +106,20 @@ def get_nii(input_fold, output_fold):
 
                     'ImagePositionPatient': ds.ImagePositionPatient if 'ImagePositionPatient' in dir(ds) else None,
                     'SliceLocation': ds.SliceLocation if 'SliceLocation' in dir(ds) else None,
+                    'SeriesNumber': ds.SeriesNumber if 'SeriesNumber' in dir(ds) else None,
+                    'InstanceNumber ': ds.InstanceNumber if 'InstanceNumber' in dir(ds) else None,
                     'PixelSpacing': ds.PixelSpacing if 'PixelSpacing' in dir(ds) else None,
                     'RescaleIntercept': ds.RescaleIntercept if 'RescaleIntercept' in dir(ds) else None,
                     'RescaleSlope': ds.RescaleSlope if 'RescaleSlope' in dir(ds) else None,
+
+                    'StudyDate': ds.StudyDate if 'StudyDate' in dir(ds) else None,
+                    'PatientName': hashlib.md5(ds.PatientName.encode()).hexdigest() if 'PatientName' in dir(ds) else None,
+                    'PatientID': ds.PatientID if 'PatientID' in dir(ds) else None,
+                    'StudyID': ds.StudyID if 'StudyID' in dir(ds) else None,
+                    'StationName': ds.StationName if 'StationName' in dir(ds) else None,
+                    # 'StudyID': ds.StudyID if 'StudyID' in dir(ds) else None,
+                    # 'StudyID': ds.StudyID if 'StudyID' in dir(ds) else None,
+                    'DeviceSerialNumber': ds.DeviceSerialNumber if 'DeviceSerialNumber' in dir(ds) else None,
 
                 })
             #save_path = series.replace(input_fold, output_fold)
@@ -120,12 +140,34 @@ def get_nii(input_fold, output_fold):
         return df
 
 if __name__ == '__main__':
-    input_fold = '/Users/felix/Documents/med_data'
-    output_fold = '/Users/felix/Documents/output_dir'
+
+    """"
+    python 
+    """
+    # input_fold = '/Users/felix/Documents/med_data'
+    # output_fold = '/Users/felix/Documents/output_dir'
+    #
+    #
+    # input_fold = '/Users/felix/Downloads/CT'
+    # output_fold = '/Users/felix/Downloads/CT_OUTPUT'
+    #
+    # input_fold = '/Users/felix/Downloads/CT'
+    # output_fold = '/Users/felix/Downloads/CT_OUTPUT'
+
+    dicm_fold = '/Volumes/My Passport/lung/dicm'
+    output_fold = '/Volumes/My Passport/lung/output'
 
 
-    input_fold = '/Users/felix/Downloads/CT'
-    output_fold = '/Users/felix/Downloads/CT_OUTPUT'
+    for file in tqdm(glob(f'{dicm_fold}/**/done.csv',recursive=True)):
 
-    df = get_nii(input_fold, output_fold)
-    print(df.head())
+        file = file.replace('done.csv', '')
+        real_output = file.replace(dicm_fold, output_fold)
+
+        # meta_file = f'{real_output}/meta.csv'
+        # if os.path.exists(meta_file):
+        #     print(meta_file)
+        #     df = pd.read_csv(meta_file)
+        #     print(f'Already had {len(df)} dicom files save to npz')
+        #     continue
+        df = get_nii(file, real_output)
+    # print(df.head())
