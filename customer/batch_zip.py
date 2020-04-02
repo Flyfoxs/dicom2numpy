@@ -43,6 +43,8 @@ def extract(input_file, out_file):
         return True
 
 
+
+
 if __name__ == '__main__':
 
     # input_fold = '/Volumes/PhiHardisk /lung/My Passport'
@@ -63,17 +65,21 @@ if __name__ == '__main__':
     zip_list = list(glob(f'{raw_fold}/**/*.zip', recursive=True))
     all_list.extend(zip_list)
     for input_file in tqdm(sorted(all_list, reverse=True)):
-        print(input_file)
 
-        real_output = input_file.replace(raw_fold,dicm_fold)
+        try:
+            print(input_file)
+            real_output = input_file.replace(raw_fold,dicm_fold)
 
-        meta_file = f'{real_output}/done.csv'
-        if os.path.exists(meta_file):
-            print(f'Already had done flag for archive file:{input_file}')
-            continue
-        os.makedirs(tmp_fold, exist_ok=True)
-        extract(input_file, real_output)
-
+            meta_file = f'{real_output}/done.csv'
+            print(meta_file)
+            if os.path.exists(meta_file):
+                print(f'Already had done flag for archive file:{input_file}')
+                continue
+            os.makedirs(tmp_fold, exist_ok=True)
+            extract(input_file, real_output)
+        except Exception as e:
+            print(f'Exception for file:{input_file}')
+            raise e
 
 
 
