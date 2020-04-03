@@ -3,16 +3,29 @@ import hashlib
 from file_cache import *
 
 from customer.dicom2nii import get_match_list
+from pandas.errors import EmptyDataError
 
 todo = glob(f'/Volumes/My Passport/lung/dicm/**/done.csv', recursive=True)
-for done_file in tqdm(todo, total=len(todo)):
-    try:
-        meta_file = done_file.replace('done.csv', 'meta.csv')
-        if os.path.exists(meta_file):
+np.random.shuffle(todo)
+todo_filter =[]
+for done_file in todo:
+    meta_file = done_file.replace('done.csv', 'meta.csv')
+    if os.path.exists(meta_file):
+        try:
             df = pd.read_csv(meta_file)
-            print(f'Already have {len(df)} file in meta:{meta_file}')
-            continue
+        except EmptyDataError as e:
+            df = pd.DataFrame()
+        except Exception as e:
+            print(f'Exception on file:{meta_file}, with {e}')
+            raise e
+            #df = pd.DataFrame()
+        print(f'Already have {len(df)} file in meta:{meta_file}')
+    else:
+        todo_filter.append(done_file)
     
+for done_file in tqdm(todo_filter, total=len(todo_filter)):
+    print(f'Processing:{done_file}')
+    try: 
         input_fold = os.path.dirname(done_file)
         file_list = get_match_list(input_fold)
     
